@@ -10,6 +10,24 @@ That flag lets any website queue jobs on your ComfyUI, because a plain `text/pla
 
 ## Install
 
+### ComfyUI Manager
+
+1. In ComfyUI, open Manager, then Custom Nodes Manager.
+2. Search for "Booru Prompt Gallery" and click Install.
+3. Restart ComfyUI.
+
+The pack is listed in the [ComfyUI registry](https://registry.comfy.org/nodes/comfyui-booru-prompt-gallery).
+
+### comfy-cli
+
+```
+comfy node install comfyui-booru-prompt-gallery
+```
+
+Then restart ComfyUI.
+
+### Manual
+
 1. Clone this repository into `ComfyUI/custom_nodes`:
 
    ```
@@ -19,7 +37,7 @@ That flag lets any website queue jobs on your ComfyUI, because a plain `text/pla
 
 2. Restart ComfyUI.
 
-The startup log shows `Booru Prompt Gallery bridge installed` followed by the allowed origins. Log lines from this pack use the logger name `booru_prompt_gallery`. Installing through ComfyUI Manager is coming soon.
+After a restart, the startup log shows `Booru Prompt Gallery bridge installed` followed by the allowed origins. Log lines from this pack use the logger name `booru_prompt_gallery`.
 
 If ComfyUI is started with `--enable-cors-header`, or a later ComfyUI version changes its server code, the pack cannot find the check it replaces. It logs a warning and stays inactive.
 
