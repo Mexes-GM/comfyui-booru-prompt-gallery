@@ -10,7 +10,7 @@ dependencies = []
 Repository = "https://github.com/Mexes-GM/comfyui-booru-prompt-gallery"
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "mexes"
 DisplayName = "Booru Prompt Gallery"
 Icon = ""
 
