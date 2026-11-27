@@ -51,3 +51,7 @@ def test_extra_origins_filtered_and_deduped(tmp_path):
 def test_bad_file_ignored(tmp_path, content):
     _write_config(tmp_path, content)
     assert load_extra_origins(str(tmp_path)) == []
+
+
+def test_defaults_are_the_public_sites_only():
+    assert all(o.startswith("https://") for o in DEFAULT_ORIGINS)

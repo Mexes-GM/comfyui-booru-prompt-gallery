@@ -2,7 +2,7 @@
 
 A node pack for the [Booru Prompt Gallery](https://booru-prompt-gallery.vercel.app) website. It has no nodes yet. Its first feature lets the gallery's Send buttons queue prompts in your local ComfyUI.
 
-ComfyUI normally rejects requests that come from another website. This pack keeps that rule except for a short list of exact origins. A request from a listed origin is let through; a request from any other origin still goes to ComfyUI's own check and gets a 403.
+ComfyUI normally rejects requests that come from another website. This pack keeps that rule except for a short list of exact origins, and only on the routes the gallery uses (see [What the gallery can reach](#what-the-gallery-can-reach)). A listed origin calling one of those routes is let through. Any other request, including a listed origin calling any other route, still goes to ComfyUI's own check and gets a 403.
 
 ## Why not `--enable-cors-header`
 
@@ -54,7 +54,6 @@ Built in:
 
 - `https://booru-prompt-gallery.vercel.app`
 - `https://booru-prompt-gallery.netlify.app`
-- `http://localhost:3000`
 
 To add more, create `booru_bridge.json` in the `default` folder of the ComfyUI user directory (by default `ComfyUI/user/default/booru_bridge.json`) and restart ComfyUI:
 
@@ -62,7 +61,19 @@ To add more, create `booru_bridge.json` in the `default` folder of the ComfyUI u
 { "extra_origins": ["https://my-gallery.example"] }
 ```
 
+To run the gallery locally, add its address here, for example `http://localhost:3000`.
+
 Each entry must be exactly `scheme://host` or `scheme://host:port`, with `http` or `https`. Paths, trailing slashes, wildcards, `*` and `null` are rejected and logged. Matching is exact, apart from lowercasing the scheme and host.
+
+## What the gallery can reach
+
+A listed origin can call only these ComfyUI routes, with or without the `/api` prefix:
+
+- `GET /system_stats`, `GET /object_info`, `GET /queue`, `GET /history/{prompt_id}`, `GET /view` and the `/ws` websocket
+- `POST /prompt`, `POST /queue` and `POST /interrupt`
+- `GET /booru_bridge/info`, `GET /booru_bridge/workflows` and `GET /booru_bridge/workflows/{id}`
+
+Everything else, such as uploads, user files, settings and ComfyUI Manager, stays closed to other websites as it is without this pack.
 
 ## HTTP API
 
@@ -99,7 +110,7 @@ The integration tests start their own ComfyUI on port 8191, on the CPU, with onl
 COMFYUI_PATH=/path/to/ComfyUI .venv/Scripts/python -m pytest -m integration
 ```
 
-ComfyUI is started with `COMFYUI_PYTHON` if set, otherwise with the `.venv` inside the ComfyUI folder, otherwise with the Python running pytest. This repository's folder must be named `comfyui-booru-prompt-gallery`, because the test loads it by that name. The tests fail if port 8191 is already in use.
+ComfyUI is started with `COMFYUI_PYTHON` if set, otherwise with the `.venv` inside the ComfyUI folder, otherwise with the Python running pytest. This repository's folder must be named `comfyui-booru-prompt-gallery`, because the test loads it by that name, and the ComfyUI folder must not already have this pack in its own `custom_nodes`, or ComfyUI loads that copy instead. The tests fail if port 8191 is already in use.
 
 ## Uninstall
 

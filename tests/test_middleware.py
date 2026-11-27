@@ -25,9 +25,17 @@ def make_app(with_original=True):
     async def missing(request):
         raise web.HTTPNotFound()
 
-    app.router.add_get("/x", ok)
-    app.router.add_post("/x", ok)
-    app.router.add_get("/missing", missing)
+    # Bridged routes, registered with and without /api as ComfyUI does.
+    for prefix in ("", "/api"):
+        app.router.add_get(prefix + "/system_stats", ok)
+        app.router.add_get(prefix + "/history/{prompt_id}", ok)
+        app.router.add_post(prefix + "/prompt", ok)
+        app.router.add_get(prefix + "/booru_bridge/workflows/{id}", missing)
+        # Not bridged.
+        app.router.add_post(prefix + "/userdata/{file}", ok)
+        app.router.add_post(prefix + "/upload/image", ok)
+        app.router.add_get(prefix + "/settings", ok)
+        app.router.add_post(prefix + "/booru_bridge/workflows", ok)
     return app
 
 
@@ -38,27 +46,66 @@ async def client(aiohttp_client):
     return await aiohttp_client(app)
 
 
-async def test_allowed_origin_get_post_options(client):
-    h = {"Origin": "https://ok.example"}
-    for method in ("get", "post", "options"):
-        r = await getattr(client, method)("/x", headers=h)
-        assert r.status == 200, method
+OK = {"Origin": "https://ok.example"}
+
+
+@pytest.mark.parametrize("prefix", ["", "/api"])
+async def test_allowed_origin_on_bridged_routes(client, prefix):
+    cases = [("get", "/system_stats", None), ("get", "/history/abc", None), ("post", "/prompt", None),
+             ("options", "/prompt", "POST"), ("options", "/system_stats", "GET")]
+    for method, path, preflight in cases:
+        h = dict(OK)
+        if preflight:
+            h["Access-Control-Request-Method"] = preflight
+        r = await getattr(client, method)(prefix + path, headers=h)
+        assert r.status == 200, (method, path)
         assert r.headers["Access-Control-Allow-Origin"] == "https://ok.example"
         assert r.headers["Vary"] == "Origin"
         assert r.headers["Access-Control-Allow-Methods"] == "GET, POST, OPTIONS"
         assert r.headers["Access-Control-Allow-Headers"] == "Content-Type"
-    assert r.headers["Access-Control-Max-Age"] == "600"
+        if method == "options":
+            assert r.headers["Access-Control-Max-Age"] == "600"
 
 
 async def test_allowed_origin_text_plain_post(client):
-    r = await client.post("/x", data="{}", headers={"Origin": "https://ok.example", "Content-Type": "text/plain"})
+    r = await client.post("/prompt", data="{}", headers={**OK, "Content-Type": "text/plain"})
     assert r.status == 200
 
 
 async def test_http_errors_still_get_cors_headers(client):
-    r = await client.get("/missing", headers={"Origin": "https://ok.example"})
+    r = await client.get("/booru_bridge/workflows/nope", headers=OK)
     assert r.status == 404
     assert r.headers["Access-Control-Allow-Origin"] == "https://ok.example"
+
+
+@pytest.mark.parametrize("method,path,preflight", [
+    ("post", "/userdata/comfy.settings.json", None),
+    ("post", "/api/userdata/booru_bridge%2Fworkflows%2Fx.json", None),
+    ("post", "/upload/image", None),
+    ("get", "/settings", None),
+    ("post", "/booru_bridge/workflows", None),
+    ("get", "/prompt", None),             # wrong method for a bridged path
+    ("post", "/system_stats", None),
+    ("get", "/unknown", None),
+    ("options", "/userdata/x", "POST"),
+    ("options", "/prompt", "DELETE"),
+    ("options", "/prompt", None),
+    ("options", "/system_stats", "POST"),
+])
+async def test_allowed_origin_on_other_routes_goes_to_original(client, method, path, preflight):
+    h = dict(OK)
+    if preflight:
+        h["Access-Control-Request-Method"] = preflight
+    r = await getattr(client, method)(path, headers=h)
+    assert r.status == 403, (method, path, preflight)
+    assert "Access-Control-Allow-Origin" not in r.headers
+
+
+async def test_dot_segments_do_not_reach_other_routes(client):
+    # yarl removes dot segments before routing, so this resolves to /userdata/x.
+    r = await client.post("/history/../userdata/x", headers=OK)
+    assert r.status == 403
+    assert "Access-Control-Allow-Origin" not in r.headers
 
 
 @pytest.mark.parametrize("origin", [
@@ -66,22 +113,25 @@ async def test_http_errors_still_get_cors_headers(client):
     "http://ok.example",
 ])
 async def test_other_origin_blocked(client, origin):
-    for method in ("get", "post", "options"):
-        r = await getattr(client, method)("/x", headers={"Origin": origin})
+    for method, path in (("get", "/system_stats"), ("post", "/prompt"), ("options", "/prompt")):
+        h = {"Origin": origin, "Access-Control-Request-Method": "POST"}
+        r = await getattr(client, method)(path, headers=h)
         assert r.status == 403, (method, origin)
         assert "Access-Control-Allow-Origin" not in r.headers
 
 
 async def test_no_origin_passes(client):
-    r = await client.get("/x")
-    assert r.status == 200
-    assert "Access-Control-Allow-Origin" not in r.headers
+    for method, path in (("get", "/system_stats"), ("post", "/userdata/x")):
+        r = await getattr(client, method)(path)
+        assert r.status == 200
+        assert "Access-Control-Allow-Origin" not in r.headers
 
 
 async def test_same_origin_still_handled_by_original(client):
     host = f"{client.host}:{client.port}"
-    r = await client.get("/x", headers={"Origin": "http://" + host})
-    assert r.status == 200
+    for method, path in (("get", "/system_stats"), ("post", "/userdata/x")):
+        r = await getattr(client, method)(path, headers={"Origin": "http://" + host})
+        assert r.status == 200
 
 
 def test_install_results():
