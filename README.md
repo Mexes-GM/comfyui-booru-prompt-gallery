@@ -46,7 +46,7 @@ If ComfyUI is started with `--enable-cors-header`, or a later ComfyUI version ch
 1. Open the workflow in ComfyUI.
 2. Click Use in Booru Prompt Gallery in the top bar, next to Run. You can also open the ComfyUI menu (the logo at the top left) and choose File, then Use in Booru Prompt Gallery.
 
-ComfyUI shows a message when the workflow is ready. It appears in the gallery's ComfyUI panel under the name of the workflow tab. Publishing again with the same name replaces the earlier copy. The workflow needs at least one output node, such as Save Image or Preview Image.
+ComfyUI shows a message when the workflow is ready, and the gallery's ComfyUI panel lists it under the name of the workflow tab. The workflow stays on your computer: the pack saves it in ComfyUI's user folder, and the gallery page in your browser reads it from your ComfyUI. Clicking the button again for a workflow with the same name replaces the earlier copy. The workflow needs at least one output node, such as Save Image or Preview Image.
 
 ## Allowed origins
 

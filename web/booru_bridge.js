@@ -61,12 +61,12 @@ async function publish() {
       } catch {
         // Not JSON: keep the status.
       }
-      notify("error", "Could not publish the workflow", detail);
+      notify("error", "Could not add the workflow", detail);
       return;
     }
     notify("success", "Ready in Booru Prompt Gallery", `"${name}" can now be picked in the gallery's ComfyUI panel.`);
   } catch (err) {
-    notify("error", "Could not publish the workflow", err?.message ?? String(err));
+    notify("error", "Could not add the workflow", err?.message ?? String(err));
   }
 }
 
