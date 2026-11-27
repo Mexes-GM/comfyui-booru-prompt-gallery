@@ -9,7 +9,6 @@ log = logging.getLogger("booru_prompt_gallery")
 DEFAULT_ORIGINS = (
     "https://booru-prompt-gallery.vercel.app",
     "https://booru-prompt-gallery.netlify.app",
-    "http://localhost:3000",
 )
 
 CONFIG_NAME = "booru_bridge.json"

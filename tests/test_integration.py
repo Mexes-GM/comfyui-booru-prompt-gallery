@@ -180,8 +180,9 @@ async def test_info(comfy, http):
     assert r.status == 200
     d = await r.json()
     assert d["middleware"] == "ok"
-    for o in (VERCEL, "https://booru-prompt-gallery.netlify.app", "http://localhost:3000", EXTRA):
+    for o in (VERCEL, "https://booru-prompt-gallery.netlify.app", EXTRA):
         assert o in d["origins"]
+    assert "http://localhost:3000" not in d["origins"]
 
 
 async def test_workflows(comfy, http):
@@ -210,6 +211,21 @@ async def test_workflows(comfy, http):
 
     r = await http.post(BASE + "/booru_bridge/workflows", json={"name": "", "api": {}})
     assert r.status == 400
+
+
+@pytest.mark.parametrize("method,path,kwargs", [
+    ("post", "/userdata/booru_bridge%2Fworkflows%2Finjected.json", {"data": "{}"}),
+    ("post", "/api/userdata/comfy.settings.json", {"data": "{}"}),
+    ("post", "/upload/image", {"data": {"image": b"x"}}),
+    ("get", "/settings", {}),
+    ("get", "/userdata?dir=workflows", {}),
+    ("post", "/free", {"data": "{}"}),
+])
+async def test_allowed_origin_cannot_reach_other_routes(comfy, http, method, path, kwargs):
+    r = await getattr(http, method)(BASE + path, headers={"Origin": VERCEL}, **kwargs)
+    assert r.status == 403, (path, r.status)
+    assert "Access-Control-Allow-Origin" not in r.headers
+    assert not (comfy["tmp"] / "user" / "default" / "booru_bridge" / "workflows" / "injected.json").exists()
 
 
 async def test_frontend_extension_served(comfy, http):
